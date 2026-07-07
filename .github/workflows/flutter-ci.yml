@@ -1,0 +1,54 @@
+name: Flutter CI (mobile + desktop)
+
+# Etapa 6 (docs/ARQUITETURA_GOODROADS.md, secao 10). Roda `flutter analyze`
+# e `flutter test` para os dois apps Flutter do monorepo — mobile/
+# (cidadao) e desktop/ (funcionario) — via matrix, ja que os dois projetos
+# tem o mesmo pipeline de verificacao.
+#
+# Nao pode ser executado no sandbox onde foi escrito (sem Flutter SDK nem
+# acesso ao pub.dev) — revisado estaticamente. Rode o primeiro push/PR com
+# atencao, e espere ter que ajustar a versao exata de `intl` conforme o
+# `flutter_localizations` da versao do Flutter que o runner instalar pedir
+# (ver mobile/README.md).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "desktop/**"
+      - ".github/workflows/flutter-ci.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - "desktop/**"
+      - ".github/workflows/flutter-ci.yml"
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [mobile, desktop]
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: flutter analyze
+        run: flutter analyze
+
+      - name: flutter test
+        run: flutter test

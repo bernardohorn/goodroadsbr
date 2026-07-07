@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+uploads
+uploads-e2e
+keys
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+tests
+tests-e2e
+README.md

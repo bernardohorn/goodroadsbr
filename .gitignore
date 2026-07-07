@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors/IDEs
+.vscode/
+.idea/
+
+# Claude Code local session state (machine-specific, not project config)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

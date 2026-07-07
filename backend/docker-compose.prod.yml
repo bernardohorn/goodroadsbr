@@ -1,0 +1,62 @@
+# Composição de referência para rodar a API em produção/staging via Docker
+# (Etapa 6). Difere do docker-compose.yml (que só sobe o Postgres, para
+# desenvolvimento local com `npm run dev` rodando fora do Docker):
+# aqui a API também roda em container, construída a partir do `Dockerfile`.
+#
+# Uso:
+#   cp .env.example .env.production   # e preencha os valores reais
+#   mkdir -p keys/dev && <coloque aqui as chaves JWT/FCM reais de produção>
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Isto não foi testado neste sandbox (sem Docker disponível) — ver
+# docs/DECISOES.md. Revisar `env_file`/segredos antes de usar em produção
+# de verdade; para múltiplas instâncias, `LOCAL_STORAGE_DIR` deixa de fazer
+# sentido e STORAGE_DRIVER=s3 passa a ser obrigatório (ver seção 7 da
+# arquitetura).
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: goodroads-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-goodroads}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goodroads}
+      POSTGRES_DB: ${POSTGRES_DB:-goodroads}
+    volumes:
+      - goodroads_pgdata:/var/lib/postgresql/data
+      - ./prisma/sql/postgis.sql:/docker-entrypoint-initdb.d/10-postgis.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-goodroads} -d ${POSTGRES_DB:-goodroads}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goodroads-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    ports:
+      - "3333:3333"
+    volumes:
+      # Chaves JWT/FCM nunca vao dentro da imagem (ver .dockerignore) — sao
+      # montadas em runtime a partir de um cofre de segredos ou de um
+      # diretorio local protegido no host.
+      - ./keys:/app/keys:ro
+      # So relevante enquanto STORAGE_DRIVER=local. Migrar para
+      # STORAGE_DRIVER=s3 antes de escalar para mais de uma instancia de
+      # API (cada instancia teria seu proprio disco local, senao).
+      - goodroads_uploads:/app/uploads
+
+volumes:
+  goodroads_pgdata:
+  goodroads_uploads:

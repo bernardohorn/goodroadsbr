@@ -1,0 +1,77 @@
+name: goodroadsbr
+description: "GoodRoads - aplicativo do cidadao para registro de ocorrencias em estradas rurais."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  flutter_localizations:
+    sdk: flutter
+
+  # Estado e injecao de dependencia (ver docs/ARQUITETURA_GOODROADS.md, secao 7.3)
+  flutter_riverpod: ^2.6.1
+
+  # Rede
+  dio: ^5.7.0
+
+  # Navegacao
+  go_router: ^14.6.2
+
+  # Armazenamento seguro de tokens (Keychain/Keystore) e preferencias simples
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+
+  # Mapas — exclusivamente OpenStreetMap (ver secao 6 da arquitetura)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.2
+
+  # Captura e tratamento de fotos
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.3.0
+  path_provider: ^2.1.5
+
+  # Notificacoes push (Etapa 5) — decisao do cliente: Firebase Cloud
+  # Messaging, acessado exclusivamente via PushRegistrationService (ver
+  # core/push/), para poder trocar de provedor no futuro sem tocar em
+  # features. Exige rodar `flutterfire configure` (ver mobile/README.md)
+  # antes de compilar — nao foi possivel gerar firebase_options.dart neste
+  # sandbox, pois isso exige um projeto Firebase real.
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.1.3
+  flutter_local_notifications: ^18.0.1
+
+  # Deteccao de conectividade e cache local / fila de sincronizacao offline
+  # (Etapa 5 — ver core/offline/). Optou-se por `sqflite` (SQL cru) em vez
+  # de Drift: Drift depende de codegen (build_runner), e este sandbox de
+  # desenvolvimento nao tem como rodar `dart run build_runner build` para
+  # gerar e verificar o `.g.dart` resultante — mesma razao pela qual o
+  # projeto já evita codegen no Riverpod (ver docs/ARQUITETURA_GOODROADS.md,
+  # secao 7.3, e docs/DECISOES.md).
+  connectivity_plus: ^6.1.0
+  sqflite: ^2.4.1
+
+  # Utilitarios
+  intl: ^0.20.2
+  equatable: ^2.0.7
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+
+  path: any
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.4
+  flutter_secure_storage_platform_interface: ^1.1.2
+
+flutter:
+  uses-material-design: true

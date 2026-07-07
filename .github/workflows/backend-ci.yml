@@ -1,0 +1,97 @@
+name: Backend CI
+
+# Etapa 6 (docs/ARQUITETURA_GOODROADS.md, secao 10). Roda a cada push/PR que
+# toca backend/, com um Postgres+PostGIS real como service container — os
+# testes e2e (tests/e2e/) dependem disso, ao contrario dos unitarios
+# (tests/*.test.ts), que usam repository mockado e nao precisam de banco.
+#
+# Este workflow nunca foi executado de verdade (o sandbox onde ele foi
+# escrito nao tem acesso ao GitHub Actions) — revisado estaticamente contra
+# a documentacao das actions usadas. Rode o primeiro push/PR com atencao.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: goodroads
+          POSTGRES_PASSWORD: goodroads
+          POSTGRES_DB: goodroads_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U goodroads -d goodroads_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e?schema=public
+      DATABASE_URL_E2E: postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Gerar chaves JWT de desenvolvimento (CI)
+        run: npm run keys:generate
+
+      - name: Gerar Prisma Client
+        run: npm run prisma:generate
+
+      - name: Aplicar migrations no banco de CI
+        run: npx prisma migrate deploy
+
+      - name: Habilitar PostGIS + trigger de sincronizacao
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql "$DATABASE_URL" -f prisma/sql/postgis.sql
+        shell: bash
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Testes unitarios
+        run: npm test
+
+      - name: Testes end-to-end
+        run: npm run test:e2e
+
+      - name: Build (tsc)
+        run: npm run build
+
+      - name: Validar build da imagem Docker
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+          tags: goodroads-api:ci
