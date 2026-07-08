@@ -44,7 +44,7 @@ export class MapRepository {
         ST_MakeEnvelope(${bbox.west}, ${bbox.south}, ${bbox.east}, ${bbox.north}, 4326)::geography
       )
       AND (${filters.status ?? null}::text IS NULL OR status::text = ${filters.status ?? null})
-      AND (${filters.categoryId ?? null}::text IS NULL OR category_id = (${filters.categoryId ?? null})::uuid)
+      AND (${filters.categoryId ?? null}::text IS NULL OR category_id = ${filters.categoryId ?? null})
       ORDER BY created_at DESC
       LIMIT ${MAX_PINS}
     `;
