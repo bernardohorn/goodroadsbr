@@ -69,6 +69,35 @@ editar código nela.
 5. Preferir editar código existente a reescrever do zero, a menos que
    explicitamente pedido.
 
+## Armadilhas já verificadas (não repetir)
+
+Bugs reais encontrados ao rodar o projeto de verdade. As correções já estão no
+código — conheça o padrão para não reintroduzir:
+
+- **Backend compila para `dist/src/...`, não `dist/...`.** O `tsconfig.json` usa
+  `rootDir: "."` (para cobrir `tests/` e `prisma/seed.ts` no typecheck), então o
+  entrypoint de produção é `dist/src/server.js` — é para lá que `npm start` e o
+  `CMD` do `Dockerfile` apontam.
+- **`psql` não entende `?schema=` do Prisma.** Ao passar o `DATABASE_URL` para o
+  `psql` (ex.: script PostGIS), remova o parâmetro: `psql "${DATABASE_URL%%\?*}"`.
+- **Prisma no Alpine precisa do engine musl + OpenSSL 3.** `schema.prisma` tem
+  `binaryTargets = ["native", "linux-musl-openssl-3.0.x"]` e o `Dockerfile`
+  instala `openssl`. Sem isso o container morre no boot (`schema engine`).
+- **Flutter SDK mínimo é `^3.11.5`** (mobile e desktop). Dart mais antigo não
+  resolve o `pubspec.yaml` — rode `flutter upgrade` se `flutter pub get` reclamar.
+- **A imagem Docker é validada no CI**, não localmente: o `Backend CI` faz build,
+  sobe o container e checa `/health`, `/health/ready`, `/metrics` e as migrations.
+
+## Guardrails automáticos (hooks)
+
+O projeto tem hooks em `.claude/settings.json` (scripts em `.claude/hooks/`):
+
+- **OSM-only**: qualquer `Write`/`Edit` em `mobile/`, `desktop/` ou `pubspec.yaml`
+  que introduza Google Maps é **bloqueado** automaticamente.
+- **Gate de pre-commit**: bloqueia commit com segredos no stage (`.env`, `.pem`,
+  service-account) e roda lint/typecheck (backend) e `flutter analyze` (mobile/
+  desktop) conforme o que está staged. Corrija o que ele apontar e recomite.
+
 ## O que NÃO fazer
 
 - Não usar Google Maps em nenhuma hipótese.
