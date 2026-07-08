@@ -8,11 +8,12 @@
 #   mkdir -p keys/dev && <coloque aqui as chaves JWT/FCM reais de produção>
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
-# Isto não foi testado neste sandbox (sem Docker disponível) — ver
-# docs/DECISOES.md. Revisar `env_file`/segredos antes de usar em produção
-# de verdade; para múltiplas instâncias, `LOCAL_STORAGE_DIR` deixa de fazer
-# sentido e STORAGE_DRIVER=s3 passa a ser obrigatório (ver seção 7 da
-# arquitetura).
+# Build + subida validados de ponta a ponta localmente (migrations e
+# prisma/sql/postgis.sql aplicados automaticamente pelo docker-entrypoint.sh
+# da API, na ordem correta; /health, /health/ready e /metrics respondendo).
+# Revisar `env_file`/segredos antes de usar em produção de verdade; para
+# múltiplas instâncias, `LOCAL_STORAGE_DIR` deixa de fazer sentido e
+# STORAGE_DRIVER=s3 passa a ser obrigatório (ver seção 7 da arquitetura).
 
 version: "3.9"
 
