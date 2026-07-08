@@ -4,6 +4,11 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
+  // "native" cobre o ambiente de desenvolvimento; "linux-musl-openssl-3.0.x"
+  // e o alvo da imagem Docker de producao (node:20-alpine, OpenSSL 3.x). Sem
+  // ele, o engine do Prisma nao carrega no container (ver Dockerfile: o
+  // pacote openssl tambem precisa estar instalado para fornecer o libssl.so.3).
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

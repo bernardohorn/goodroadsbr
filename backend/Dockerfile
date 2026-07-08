@@ -25,6 +25,9 @@ RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /app
+# openssl (libssl.so.3): necessario para o Prisma gerar/rodar o engine
+# correto no Alpine (OpenSSL 3.x) — ver binaryTargets em prisma/schema.prisma.
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -34,8 +37,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# curl e usado apenas pelo HEALTHCHECK abaixo.
-RUN apk add --no-cache curl \
+# curl: usado pelo HEALTHCHECK abaixo. openssl (libssl.so.3): necessario para
+# o `prisma migrate deploy` do entrypoint e o Prisma Client carregarem o engine
+# no Alpine (OpenSSL 3.x) — sem ele o container morre no boot com
+# "Could not parse schema engine response". Instalado antes do `npm ci` para
+# que o postinstall do prisma detecte o OpenSSL 3.0 e baixe o schema engine certo.
+RUN apk add --no-cache curl openssl \
   && addgroup -S goodroads && adduser -S goodroads -G goodroads
 
 COPY package.json package-lock.json* ./
