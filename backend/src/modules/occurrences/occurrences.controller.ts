@@ -41,7 +41,8 @@ export class OccurrencesController {
   };
 
   updateDetails = async (req: Request, res: Response) => {
-    const occurrence = await this.service.updateDetails(req.params.id, req.body);
+    if (!req.auth) throw AppError.unauthorized();
+    const occurrence = await this.service.updateDetails(req.auth, req.params.id, req.body);
     return res.status(200).json(occurrence);
   };
 

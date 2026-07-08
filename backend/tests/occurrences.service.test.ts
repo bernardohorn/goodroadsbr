@@ -57,6 +57,8 @@ function buildOccurrence(overrides: Partial<OccurrenceDetail> = {}): OccurrenceD
 
 const citizenAuth = { userId: 'citizen-1', role: RoleName.CIDADAO, municipalityId: null };
 const staffAuth = { userId: 'staff-1', role: RoleName.FUNCIONARIO, municipalityId: null };
+const staffAuthMunA = { userId: 'staff-a', role: RoleName.FUNCIONARIO, municipalityId: 'municipio-a' };
+const staffAuthMunB = { userId: 'staff-b', role: RoleName.FUNCIONARIO, municipalityId: 'municipio-b' };
 
 describe('OccurrencesService', () => {
   let repo: MockedRepo;
@@ -116,9 +118,24 @@ describe('OccurrencesService', () => {
       await expect(service.getById(citizenAuth, 'occ-1')).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
 
-    it('permite que a equipe da prefeitura veja qualquer ocorrencia', async () => {
+    it('permite que a equipe da prefeitura veja qualquer ocorrencia (staff sem prefeitura vinculada = admin de sistema)', async () => {
       repo.findById.mockResolvedValue(buildOccurrence({ citizenId: 'outro-cidadao' }));
       await expect(service.getById(staffAuth, 'occ-1')).resolves.toMatchObject({ id: 'occ-1' });
+    });
+
+    it('permite que funcionario veja ocorrencia da propria prefeitura', async () => {
+      repo.findById.mockResolvedValue(buildOccurrence({ citizenId: 'outro-cidadao', municipalityId: 'municipio-a' }));
+      await expect(service.getById(staffAuthMunA, 'occ-1')).resolves.toMatchObject({ id: 'occ-1' });
+    });
+
+    it('bloqueia funcionario de ver ocorrencia de outra prefeitura', async () => {
+      repo.findById.mockResolvedValue(buildOccurrence({ citizenId: 'outro-cidadao', municipalityId: 'municipio-a' }));
+      await expect(service.getById(staffAuthMunB, 'occ-1')).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('permite que funcionario com prefeitura vinculada veja ocorrencia ainda sem prefeitura atribuida (cadastro de cidadao hoje nao atribui uma)', async () => {
+      repo.findById.mockResolvedValue(buildOccurrence({ citizenId: 'outro-cidadao', municipalityId: null }));
+      await expect(service.getById(staffAuthMunA, 'occ-1')).resolves.toMatchObject({ id: 'occ-1' });
     });
   });
 
@@ -160,6 +177,40 @@ describe('OccurrencesService', () => {
         status: OccurrenceStatus.RESOLVIDA,
         resolvedAt: expect.any(Date)
       });
+    });
+
+    it('bloqueia funcionario de mudar status de ocorrencia de outra prefeitura', async () => {
+      repo.findById.mockResolvedValue(
+        buildOccurrence({ status: OccurrenceStatus.PENDENTE, municipalityId: 'municipio-a' })
+      );
+
+      await expect(
+        service.updateStatus(staffAuthMunB, 'occ-1', { status: OccurrenceStatus.EM_ANDAMENTO })
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+      expect(repo.updateStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateDetails', () => {
+    it('permite que funcionario da mesma prefeitura atualize detalhes', async () => {
+      const occurrence = buildOccurrence({ municipalityId: 'municipio-a' });
+      repo.findById.mockResolvedValue(occurrence);
+      repo.updateDetails.mockResolvedValue({ ...occurrence, priority: OccurrencePriority.ALTA });
+
+      await service.updateDetails(staffAuthMunA, 'occ-1', { priority: OccurrencePriority.ALTA });
+
+      expect(repo.updateDetails).toHaveBeenCalledWith('occ-1', { priority: OccurrencePriority.ALTA });
+    });
+
+    it('bloqueia funcionario de outra prefeitura de atualizar detalhes', async () => {
+      repo.findById.mockResolvedValue(buildOccurrence({ municipalityId: 'municipio-a' }));
+
+      await expect(
+        service.updateDetails(staffAuthMunB, 'occ-1', { priority: OccurrencePriority.ALTA })
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+      expect(repo.updateDetails).not.toHaveBeenCalled();
     });
   });
 });

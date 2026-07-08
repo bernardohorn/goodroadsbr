@@ -22,12 +22,27 @@ interface UploadedFile {
   mimetype: string;
 }
 
-function assertOwnershipOrStaff(auth: AuthContext, citizenId: string) {
-  const isOwner = auth.userId === citizenId;
-  const isStaff = auth.role === RoleName.FUNCIONARIO || auth.role === RoleName.ADMIN;
-  if (!isOwner && !isStaff) {
-    throw AppError.forbidden('Voce nao tem permissao para acessar esta ocorrencia.');
+/**
+ * Cidadao so acessa a propria ocorrencia. Staff (FUNCIONARIO/ADMIN) so acessa
+ * ocorrencias da propria prefeitura — bloqueia apenas quando AMBOS os lados
+ * tem `municipalityId` definido e diferente. Se qualquer um dos dois for nulo
+ * (staff sem prefeitura vinculada, ou ocorrencia ainda sem prefeitura porque o
+ * cadastro de cidadao hoje nao atribui uma — ver auth.repository.createCitizen),
+ * o acesso e liberado, para nao quebrar o fluxo atual em que toda ocorrencia
+ * nasce com municipalityId nulo. Espelha o scoping ja aplicado em `list()`,
+ * que so filtrava listagens e nao a leitura/edicao por id, permitindo acesso
+ * cruzado entre prefeituras assim que essa atribuicao for implementada.
+ */
+function assertAccess(auth: AuthContext, occurrence: { citizenId: string; municipalityId: string | null }) {
+  if (auth.userId === occurrence.citizenId) {
+    return;
   }
+  const isStaff = auth.role === RoleName.FUNCIONARIO || auth.role === RoleName.ADMIN;
+  const sameMunicipality = !auth.municipalityId || !occurrence.municipalityId || auth.municipalityId === occurrence.municipalityId;
+  if (isStaff && sameMunicipality) {
+    return;
+  }
+  throw AppError.forbidden('Voce nao tem permissao para acessar esta ocorrencia.');
 }
 
 /**
@@ -117,7 +132,7 @@ export class OccurrencesService {
     if (!occurrence) {
       throw AppError.notFound('Ocorrencia nao encontrada.');
     }
-    assertOwnershipOrStaff(auth, occurrence.citizenId);
+    assertAccess(auth, occurrence);
     return occurrence;
   }
 
@@ -126,6 +141,7 @@ export class OccurrencesService {
     if (!occurrence) {
       throw AppError.notFound('Ocorrencia nao encontrada.');
     }
+    assertAccess(auth, occurrence);
 
     const allowedNextStatuses = ALLOWED_STATUS_TRANSITIONS[occurrence.status] ?? [];
     if (!allowedNextStatuses.includes(dto.status)) {
@@ -158,6 +174,7 @@ export class OccurrencesService {
   }
 
   async updateDetails(
+    auth: AuthContext,
     id: string,
     dto: {
       categoryId?: string;
@@ -171,6 +188,7 @@ export class OccurrencesService {
     if (!occurrence) {
       throw AppError.notFound('Ocorrencia nao encontrada.');
     }
+    assertAccess(auth, occurrence);
     return this.repo.updateDetails(id, dto);
   }
 
@@ -179,7 +197,7 @@ export class OccurrencesService {
     if (!occurrence) {
       throw AppError.notFound('Ocorrencia nao encontrada.');
     }
-    assertOwnershipOrStaff(auth, occurrence.citizenId);
+    assertAccess(auth, occurrence);
     return this.repo.listHistory(id);
   }
 }
