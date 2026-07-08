@@ -90,9 +90,68 @@ jobs:
       - name: Build (tsc)
         run: npm run build
 
-      - name: Validar build da imagem Docker
-        uses: docker/build-push-action@v6
-        with:
-          context: backend
-          push: false
-          tags: goodroads-api:ci
+      - name: Build da imagem Docker
+        run: docker build -t goodroads-api:ci .
+
+      # Smoke test da imagem de producao: sobe o container de verdade contra
+      # um banco VAZIO (goodroads_docker) para provar que o docker-entrypoint.sh
+      # aplica as migrations sozinho, e que /health, /health/ready (checa o
+      # Postgres) e /metrics respondem. Complementa o build acima, que so
+      # garante que a imagem compila, nao que ela roda.
+      - name: Criar banco vazio para o smoke test do container
+        env:
+          PGPASSWORD: goodroads
+        run: psql -h localhost -U goodroads -d postgres -c "CREATE DATABASE goodroads_docker;"
+
+      - name: Subir o container da imagem
+        run: |
+          docker run -d --name goodroads-api-ci \
+            --network host \
+            -e NODE_ENV=production \
+            -e DATABASE_URL="postgresql://goodroads:goodroads@localhost:5432/goodroads_docker?schema=public" \
+            goodroads-api:ci
+
+      - name: Esperar o /health e validar /health/ready e /metrics
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3333/health > /dev/null 2>&1; then
+              echo "API respondeu em /health (tentativa $i)"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "::error::API nao respondeu em /health apos 60s"
+              docker logs goodroads-api-ci || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "== /health =="
+          curl -fsS http://localhost:3333/health
+          echo
+          echo "== /health/ready =="
+          curl -fsS http://localhost:3333/health/ready | grep -q '"status":"ready"'
+          echo "readiness OK (Postgres alcancavel a partir do container)"
+          echo "== /metrics =="
+          curl -fsS http://localhost:3333/metrics | grep -q '^process_cpu_user_seconds_total'
+          echo "metrics OK (formato Prometheus)"
+
+      - name: Confirmar que o entrypoint aplicou as migrations sozinho
+        env:
+          PGPASSWORD: goodroads
+        run: |
+          docker logs goodroads-api-ci 2>&1 | grep -q "Aplicando migrations pendentes" \
+            || { echo "::error::entrypoint nao rodou migrate deploy"; exit 1; }
+          # O banco comecou vazio; se o entrypoint aplicou as migrations, a
+          # tabela _prisma_migrations e as tabelas do schema devem existir.
+          COUNT=$(psql -h localhost -U goodroads -d goodroads_docker -tAc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('users','occurrences','_prisma_migrations');")
+          echo "Tabelas-chave encontradas: $COUNT/3"
+          [ "$COUNT" = "3" ] || { echo "::error::migrations nao aplicadas no banco vazio"; exit 1; }
+
+      - name: Logs do container e limpeza
+        if: always()
+        run: |
+          echo "== docker logs goodroads-api-ci =="
+          docker logs goodroads-api-ci || true
+          docker rm -f goodroads-api-ci || true

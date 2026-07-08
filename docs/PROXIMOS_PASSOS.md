@@ -25,6 +25,14 @@ Todo o código das Etapas 0-6 (ver `docs/ARQUITETURA_GOODROADS.md`, seção 10, 
 
 ## Etapa D — Build e teste da imagem Docker
 
+> **Automatizado no CI.** O `Backend CI` (`.github/workflows/backend-ci.yml`)
+> agora faz `docker build` da imagem, sobe o container contra um banco vazio e
+> valida que `docker-entrypoint.sh` aplica as migrations sozinho e que
+> `GET /health`, `GET /health/ready` e `GET /metrics` respondem. Ou seja, a
+> imagem de producao e exercitada de verdade a cada push/PR — nao so buildada.
+> Rodar localmente (abaixo) continua util para depurar, mas nao e mais a unica
+> forma de validar.
+
 - `docker build -t goodroads-api backend/`
 - `docker compose -f backend/docker-compose.prod.yml up -d --build` localmente, com um `.env.production` de teste
 - Confirmar `GET /health`, `GET /health/ready` e `GET /metrics` respondendo, e que `docker-entrypoint.sh` aplicou as migrations sozinho
