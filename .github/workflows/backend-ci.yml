@@ -71,7 +71,8 @@ jobs:
       - name: Habilitar PostGIS + trigger de sincronizacao
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client
-          psql "$DATABASE_URL" -f prisma/sql/postgis.sql
+          # psql nao entende o parametro ?schema= do Prisma, por isso removemos antes de usar
+          psql "${DATABASE_URL%%\?*}" -f prisma/sql/postgis.sql
         shell: bash
 
       - name: Lint
