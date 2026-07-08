@@ -123,6 +123,8 @@ mkdir -p keys/dev                 # coloque aqui as chaves JWT (e FCM, se PUSH_D
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+No `.env.production`, ajuste o host do `DATABASE_URL` de `localhost` para `postgres` (o nome do serviço no `docker-compose.prod.yml`) — dentro da rede do Docker Compose, o container da API nao alcanca o Postgres via `localhost`.
+
 O `docker-entrypoint.sh` roda `prisma migrate deploy` automaticamente antes de iniciar a API. `GET /health` (liveness) e `GET /health/ready` (readiness) ficam disponiveis para o orquestrador; `GET /metrics` expõe métricas Prometheus (mantenha fora do acesso público). Ver `../docs/ARQUITETURA_GOODROADS.md`, seção 12, para o detalhamento completo (segurança, observabilidade, CI/CD).
 
 ## Estrutura
