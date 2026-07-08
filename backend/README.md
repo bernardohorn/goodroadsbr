@@ -70,7 +70,9 @@ npm run keys:generate
 npm run prisma:migrate
 
 # Adiciona a coluna geoespacial (PostGIS) e o trigger de sincronizacao
-psql "$DATABASE_URL" -f prisma/sql/postgis.sql
+# (psql/libpq nao aceita o parametro "?schema=" da DATABASE_URL do Prisma —
+# remova-o antes de passar a URL para o psql)
+psql "${DATABASE_URL%%\?*}" -f prisma/sql/postgis.sql
 
 # Popula dados iniciais (roles, prefeitura de exemplo, categorias, 1 funcionario)
 npm run prisma:seed
@@ -100,7 +102,7 @@ docker compose up -d
 DATABASE_URL_E2E="postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e?schema=public" \
   DATABASE_URL="postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e?schema=public" \
   npx prisma migrate deploy
-psql "postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e?schema=public" -f prisma/sql/postgis.sql
+psql "postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e" -f prisma/sql/postgis.sql
 
 # 3. Rode os testes e2e (config e comando separados de `npm test`)
 DATABASE_URL_E2E="postgresql://goodroads:goodroads@localhost:5432/goodroads_e2e?schema=public" npm run test:e2e
