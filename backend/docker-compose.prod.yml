@@ -27,7 +27,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-goodroads}
     volumes:
       - goodroads_pgdata:/var/lib/postgresql/data
-      - ./prisma/sql/postgis.sql:/docker-entrypoint-initdb.d/10-postgis.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-goodroads} -d ${POSTGRES_DB:-goodroads}"]
       interval: 5s

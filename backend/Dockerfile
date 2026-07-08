@@ -25,6 +25,11 @@ RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /app
+# Alpine nao traz libssl como pacote instalado por padrao, o que faz o
+# Prisma falhar ao detectar a versao do OpenSSL (cai num engine
+# openssl-1.1.x incompativel com o OpenSSL 3.x desta imagem) e quebrar em
+# runtime com "Could not parse schema engine response".
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -34,8 +39,11 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# curl e usado apenas pelo HEALTHCHECK abaixo.
-RUN apk add --no-cache curl \
+# curl e usado apenas pelo HEALTHCHECK abaixo; openssl e necessario para o
+# schema engine do Prisma detectar corretamente o OpenSSL 3.x desta imagem
+# (ver comentario no estagio "build"); postgresql-client (psql) e usado pelo
+# docker-entrypoint.sh para aplicar prisma/sql/postgis.sql apos as migrations.
+RUN apk add --no-cache curl openssl postgresql-client \
   && addgroup -S goodroads && adduser -S goodroads -G goodroads
 
 COPY package.json package-lock.json* ./
@@ -61,4 +69,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:3333/health || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/server.js"]
