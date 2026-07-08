@@ -30,22 +30,35 @@ export interface Pagination {
 }
 
 function buildWhere(filters: OccurrenceListFilters): Prisma.OccurrenceWhereInput {
-  return {
-    ...(filters.citizenId ? { citizenId: filters.citizenId } : {}),
-    ...(filters.status ? { status: filters.status } : {}),
-    ...(filters.priority ? { priority: filters.priority } : {}),
-    ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-    ...(filters.municipalityId ? { municipalityId: filters.municipalityId } : {}),
-    ...(filters.search
-      ? {
-          OR: [
-            { description: { contains: filters.search, mode: 'insensitive' } },
-            { protocolNumber: { contains: filters.search, mode: 'insensitive' } },
-            { address: { contains: filters.search, mode: 'insensitive' } }
-          ]
-        }
-      : {})
-  };
+  // Cada filtro "OR" (prefeitura, busca textual) vira uma entrada separada
+  // de `conditions`, combinada no final com `AND` — nunca um objeto so com
+  // duas chaves `OR` (a segunda sobrescreveria a primeira em silencio).
+  const conditions: Prisma.OccurrenceWhereInput[] = [];
+
+  if (filters.citizenId) conditions.push({ citizenId: filters.citizenId });
+  if (filters.status) conditions.push({ status: filters.status });
+  if (filters.priority) conditions.push({ priority: filters.priority });
+  if (filters.categoryId) conditions.push({ categoryId: filters.categoryId });
+  if (filters.municipalityId) {
+    // O cadastro de cidadao hoje nao atribui uma prefeitura (ver
+    // occurrences.service.ts, assertAccess), entao toda ocorrencia nasce
+    // com municipalityId nulo. Filtrar so por igualdade excluiria TODAS as
+    // ocorrencias para qualquer funcionario com prefeitura vinculada —
+    // por isso ocorrencias sem prefeitura atribuida tambem entram no
+    // resultado, espelhando a mesma leniencia de assertAccess.
+    conditions.push({ OR: [{ municipalityId: filters.municipalityId }, { municipalityId: null }] });
+  }
+  if (filters.search) {
+    conditions.push({
+      OR: [
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { protocolNumber: { contains: filters.search, mode: 'insensitive' } },
+        { address: { contains: filters.search, mode: 'insensitive' } }
+      ]
+    });
+  }
+
+  return conditions.length > 0 ? { AND: conditions } : {};
 }
 
 export class OccurrencesRepository {

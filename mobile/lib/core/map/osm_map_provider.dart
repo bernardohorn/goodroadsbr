@@ -34,12 +34,12 @@ class OsmMapProvider implements MapProviderContract {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw AppLocationServiceDisabledException();
+        throw AppLocationPermissionDeniedException();
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      throw AppLocationPermissionDeniedException();
+      throw AppLocationPermissionPermanentlyDeniedException();
     }
   }
 

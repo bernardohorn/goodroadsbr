@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Necessarias para o Geolocator obter a posicao real do dispositivo
+         (ver core/map/osm_map_provider.dart). O plugin geolocator_android
+         nao injeta essas permissoes automaticamente no manifest do app. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <application
         android:label="goodroadsbr"
         android:name="${applicationName}"

@@ -20,14 +20,14 @@ import { uniqueEmail } from './setupE2e';
 
 const app = createApp();
 
-async function createStaffUser(role: typeof RoleName.FUNCIONARIO | typeof RoleName.ADMIN) {
+async function createStaffUser(role: typeof RoleName.FUNCIONARIO | typeof RoleName.ADMIN, municipalityId?: string) {
   const email = uniqueEmail(role.toLowerCase());
   const password = 'Senha@123';
   const roleRow = await prisma.role.findUniqueOrThrow({ where: { name: role } });
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id, ...ARGON2_OPTIONS });
 
   await prisma.user.create({
-    data: { name: `Staff E2E (${role})`, email, passwordHash, roleId: roleRow.id }
+    data: { name: `Staff E2E (${role})`, email, passwordHash, roleId: roleRow.id, municipalityId }
   });
 
   const loginResponse = await request(app).post('/api/v1/auth/login').send({ email, password });
@@ -131,5 +131,45 @@ describe('E2E — /api/v1/occurrences', () => {
     expect(citizenListResponse.status).toBe(200);
     expect(citizenListResponse.body.items.every((item: { citizenId: string }) => item.citizenId)).toBe(true);
     expect(citizenListResponse.body.items.some((item: { id: string }) => item.id === occurrenceId)).toBe(true);
+  });
+
+  it('funcionario com prefeitura vinculada ve, na listagem, ocorrencias ainda sem prefeitura atribuida', async () => {
+    // O cadastro de cidadao hoje nao atribui uma prefeitura (ver comentario
+    // em occurrences.service.ts, assertAccess) — toda ocorrencia nasce com
+    // municipalityId null. Um funcionario com prefeitura vinculada precisa
+    // continuar vendo essas ocorrencias na listagem, do mesmo jeito que ja
+    // consegue abri-las individualmente por id (ver o teste de getById
+    // equivalente em occurrences.service.test.ts).
+    const municipality = await prisma.municipality.upsert({
+      where: { slug: 'concordia-e2e' },
+      update: {},
+      create: { name: 'Prefeitura de Concordia (E2E)', slug: 'concordia-e2e', primaryColor: '#1B7A3E' }
+    });
+
+    const citizenToken = await createCitizenAndLogin();
+    const staffToken = await createStaffUser(RoleName.FUNCIONARIO, municipality.id);
+
+    const photo = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64'
+    );
+
+    const createResponse = await request(app)
+      .post('/api/v1/occurrences')
+      .set('Authorization', `Bearer ${citizenToken}`)
+      .field('description', 'Buraco grande na estrada principal, dificil de desviar.')
+      .field('latitude', '-27.1962')
+      .field('longitude', '-52.0264')
+      .attach('photos', photo, { filename: 'buraco.png', contentType: 'image/png' });
+
+    expect(createResponse.status).toBe(201);
+    const occurrenceId = createResponse.body.id;
+
+    const staffListResponse = await request(app)
+      .get('/api/v1/occurrences')
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(staffListResponse.status).toBe(200);
+    expect(staffListResponse.body.items.some((item: { id: string }) => item.id === occurrenceId)).toBe(true);
   });
 });
