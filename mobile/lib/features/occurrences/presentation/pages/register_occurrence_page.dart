@@ -375,7 +375,7 @@ class _LocationStep extends ConsumerWidget {
                 children: [tileLayer],
               ),
               const IgnorePointer(child: Icon(Icons.location_pin, size: 44, color: Colors.redAccent)),
-              if (isLocating) const Positioned(top: 12, child: LinearProgressIndicator()),
+              if (isLocating) const Positioned(left: 12, right: 12, top: 12, child: LinearProgressIndicator()),
               Positioned(
                 right: 12,
                 bottom: 12,
