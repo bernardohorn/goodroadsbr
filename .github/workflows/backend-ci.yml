@@ -71,7 +71,10 @@ jobs:
       - name: Habilitar PostGIS + trigger de sincronizacao
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client
-          psql "$DATABASE_URL" -f prisma/sql/postgis.sql
+          # psql (libpq) nao reconhece o parametro de query "?schema=" que o
+          # Prisma usa na DATABASE_URL — precisa ser removido antes de passar
+          # a URI para o psql (mesmo ajuste feito em docker-entrypoint.sh).
+          psql "${DATABASE_URL%%\?*}" -v ON_ERROR_STOP=1 -f prisma/sql/postgis.sql
         shell: bash
 
       - name: Lint
