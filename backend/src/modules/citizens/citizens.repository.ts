@@ -52,6 +52,10 @@ export class CitizensRepository {
   }
 
   updateStatus(id: string, active: boolean): Promise<Citizen> {
-    return this.db.user.update({ where: { id }, data: { active }, select: citizenSelect });
+    return this.db.user.update({
+      where: { id, role: { name: RoleName.CIDADAO } },
+      data: { active },
+      select: citizenSelect
+    });
   }
 }
