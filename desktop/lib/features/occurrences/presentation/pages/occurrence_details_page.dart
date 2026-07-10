@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/map/osm_map_provider.dart';
+import '../../../../core/utils/cpf_formatter.dart';
 import '../../../../core/widgets/skeleton_loader.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../domain/entities/occurrence_status_history_entry.dart';
@@ -179,6 +180,7 @@ class _DetailsContent extends ConsumerWidget {
                         Text('Cidadão', style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 12),
                         _InfoRow(label: 'Nome', value: occurrence.citizenName ?? '—'),
+                        _InfoRow(label: 'CPF', value: formatCpf(occurrence.citizenCpf) ?? '—'),
                         _InfoRow(label: 'E-mail', value: occurrence.citizenEmail ?? '—'),
                         _InfoRow(label: 'Telefone', value: occurrence.citizenPhone ?? '—'),
                         _InfoRow(label: 'Registrada em', value: dateFormat.format(occurrence.createdAt)),
