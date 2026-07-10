@@ -6,7 +6,7 @@ const occurrenceDetail = Prisma.validator<Prisma.OccurrenceDefaultArgs>()({
     photos: { orderBy: { order: 'asc' } },
     category: true,
     team: true,
-    citizen: { select: { id: true, name: true, email: true, phone: true } },
+    citizen: { select: { id: true, name: true, email: true, phone: true, cpf: true } },
     assignedTo: { select: { id: true, name: true, email: true } }
   }
 });

@@ -23,6 +23,7 @@ class StaffOccurrence extends Equatable {
     this.assignedToId,
     this.assignedToName,
     this.citizenName,
+    this.citizenCpf,
     this.citizenEmail,
     this.citizenPhone,
     this.internalNotes,
@@ -46,6 +47,7 @@ class StaffOccurrence extends Equatable {
   final String? assignedToId;
   final String? assignedToName;
   final String? citizenName;
+  final String? citizenCpf;
   final String? citizenEmail;
   final String? citizenPhone;
   final String? internalNotes;
@@ -72,6 +74,7 @@ class StaffOccurrence extends Equatable {
         assignedToId,
         assignedToName,
         citizenName,
+        citizenCpf,
         citizenEmail,
         citizenPhone,
         internalNotes,
