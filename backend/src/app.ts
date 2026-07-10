@@ -12,6 +12,7 @@ import { logger } from './core/logger/logger';
 import { prisma } from './infra/database/prisma.client';
 import { authRoutes } from './modules/auth/auth.routes';
 import { categoriesRoutes } from './modules/categories/categories.routes';
+import { citizensRoutes } from './modules/citizens/citizens.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
 import { mapRoutes } from './modules/map/map.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
@@ -106,6 +107,7 @@ export function createApp() {
   app.use(`${env.API_PREFIX}/users`, usersRoutes);
   app.use(`${env.API_PREFIX}/occurrences`, occurrencesRoutes);
   app.use(`${env.API_PREFIX}/categories`, categoriesRoutes);
+  app.use(`${env.API_PREFIX}/citizens`, citizensRoutes);
   app.use(`${env.API_PREFIX}/teams`, teamsRoutes);
   app.use(`${env.API_PREFIX}/notifications`, notificationsRoutes);
   app.use(`${env.API_PREFIX}/map`, mapRoutes);
