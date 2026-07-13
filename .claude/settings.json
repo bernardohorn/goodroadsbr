@@ -3,6 +3,8 @@
     "allow": [
       "Bash(npm run *)",
       "Bash(npm test*)",
+      "Bash(npm ci)",
+      "Bash(npm install)",
       "Bash(npx prisma *)",
       "Bash(flutter *)",
       "Bash(git status)",
@@ -10,16 +12,53 @@
       "Bash(git log*)",
       "Bash(git add*)",
       "Bash(git commit*)",
-      "Bash(git checkout -b*)"
+      "Bash(git checkout -b*)",
+      "Bash(git switch*)",
+      "Bash(git branch*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)"
     ],
     "deny": [
       "Bash(git push --force*)",
       "Bash(rm -rf*)",
       "Bash(npx prisma migrate reset*)",
       "Bash(psql * DROP*)",
+      "Bash(cat *.env)",
+      "Bash(cat *.pem)",
       "Read(.env)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
       "Read(**/*.pem)",
+      "Read(**/keys/**)",
+      "Read(**/firebase-service-account*.json)",
       "Read(**/secrets/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/osm-guard.mjs",
+            "timeout": 15,
+            "statusMessage": "Guardrail OSM-only (sem Google Maps)..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-commit-guard.mjs",
+            "if": "Bash(git commit*)",
+            "timeout": 180,
+            "statusMessage": "Gate de pre-commit (segredos + lint/typecheck/analyze)..."
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
@@ -27,7 +66,7 @@
     "skill-creator@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true,
+    "playwright@claude-plugins-official": false,
     "code-simplifier@claude-plugins-official": true,
     "figma@claude-plugins-official": true,
     "coderabbit@claude-plugins-official": true,
